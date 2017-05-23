@@ -22,7 +22,7 @@
   , refresh_token/1
   , get_userinfo/1
   , verify/4
-  , send_template_message/2 ]).
+  , send_template_message/3 ]).
 
 -export([init/1
   , handle_call/3
@@ -111,12 +111,14 @@ verify(Signature, Timestamp, Nonce,Token) when is_list(Signature),is_list(Timest
   TmpStr = string:join(TmpList2, ""),
   Hash = wechat_util:hexstring(TmpStr),
   string:equal(string:to_lower(Signature), string:to_lower(Hash)).
-
-send_template_message(AccessToken, Message) when is_binary(AccessToken),is_binary(Message) ->
-  send_template_message(binary_to_list(AccessToken), Message);
-send_template_message(AccessToken, Message) when is_list(AccessToken),is_binary(Message) ->
-  URL = ?API_URL_PREFIX ++ "/cgi-bin/message/template/send?access_token="++AccessToken,
-  wechat_util:http_post(URL, Message).
+send_template_message(Template_id, Openid,Date) when is_list(Template_id),is_binary(Openid),is_map(Date)->
+  send_template_message(list_to_binary(Template_id), Openid,Date) ;
+send_template_message(Template_id, Openid,Date) when is_binary(Template_id),is_binary(Openid),is_map(Date) ->
+  Access_token = env_access_token(),
+  URL = ?API_URL_PREFIX ++ "/cgi-bin/message/template/send?access_token="++Access_token,
+  Message = process_message(Template_id,Openid,Date),
+  Msg2 = jsx:encode(Message),
+  wechat_util:http_post(URL, Msg2).
 
 
 check_test()->
@@ -140,3 +142,39 @@ env_access_token() ->
   {ok,Access_token} = application:get_env(erlchat,access_token),
   Access_token.
 
+
+
+process_message(Template_id, Openid, Date) ->
+  Date1 = maps:to_list(Date),
+  L = [ pr_msg(Msg) || Msg <-Date1 ],
+  M =#{<<"touser">> => Openid
+    ,<<"template_id">> => Template_id
+    ,<<"data">> => L
+  },
+  maps:to_list(M).
+
+process_message_test() ->
+  Template_id = <<"wUKW58uIfGCDNzcf3UIrL1DDSapV6HwAPCW0c6ucVpY">>,
+  Openid = <<"ofD9N0wpZmyZrpT5A4FobW055TKY">>,
+  Date = #{<<"first">> => <<"first">>
+    ,<<"keyword1">> => <<"keyword1">>
+    ,<<"keyword2">> => <<"keyword2">>
+    ,<<"keyword3">> => <<"keyword3">>
+    ,<<"remark">> => <<"remark">>
+  },
+  Msg = process_message(Template_id,Openid,Date),
+  Export = [
+    {<<"data">>,[
+      {<<"first">>,[{<<"value">>,<<"first">>},{<<"color">>,<<"#173177">>}]}
+      ,{<<"keyword1">>,[{<<"value">>,<<"keyword1">>},{<<"color">>,<<"#173177">>}]}
+      ,{<<"keyword2">>,[{<<"value">>,<<"keyword2">>},{<<"color">>,<<"#173177">>}]}
+      ,{<<"keyword3">>,[{<<"value">>,<<"keyword3">>},{<<"color">>,<<"#173177">>}]}
+      ,{<<"remark">>,[{<<"value">>,<<"remark">>},{<<"color">>,<<"#173177">>}]}
+    ]}
+    ,{<<"template_id">>,<<"wUKW58uIfGCDNzcf3UIrL1DDSapV6HwAPCW0c6ucVpY">>}
+    ,{<<"touser">>,<<"ofD9N0wpZmyZrpT5A4FobW055TKY">>}
+  ],
+  ?assertEqual(Export, Msg).
+
+pr_msg({Key,Val}) ->
+  {Key,[{<<"value">>,Val},{<<"color">>,<<"#173177">>}]}.
