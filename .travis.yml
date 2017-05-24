@@ -5,6 +5,3 @@ otp_release:
    - 18.3
    - 19.2
    - 19.3
-
-
-script: "rebar compile && rebar skip_deps=true eunit"
