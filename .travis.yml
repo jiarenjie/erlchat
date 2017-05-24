@@ -6,4 +6,4 @@ otp_release:
    - 19.2
    - 19.3
 
-script: "make compile && rm -rf .git && make test"
+script: "./rebar3 eunit"
