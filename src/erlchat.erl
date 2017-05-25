@@ -140,7 +140,7 @@ get_secret() ->
 
 env_access_token() ->
   {ok,Access_token} = application:get_env(erlchat,access_token),
-  Access_token.
+  binary_to_list(Access_token).
 
 
 
