@@ -16,7 +16,7 @@
 -define(SERVER, ?MODULE).
 
 %% API
--export([get_code_url/0
+-export([get_code_url/1
   , get_access_token/0
   , get_access_token/1
   , refresh_token/1
@@ -57,10 +57,10 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
-
-get_code_url() ->
+get_code_url(Rerirect_url) when is_binary(Rerirect_url)->
+  get_code_url(binary_to_list(Rerirect_url));
+get_code_url(Rerirect_url) when is_list(Rerirect_url)->
   Appid = get_apppid(),
-  Rerirect_url=get_redirect_uri(),
   Enc_url=edoc_lib:escape_uri(Rerirect_url),
   <<A:32,_B:32,_C:32>> = crypto:strong_rand_bytes(12),
   State = integer_to_list(A),
@@ -133,9 +133,6 @@ get_apppid() ->
   {ok,Appid}=application:get_env(erlchat,appid),
   Appid.
 
-get_redirect_uri() ->
-  {ok,Redirect_uri} = application:get_env(erlchat,redirect_uri),
-  Redirect_uri.
 
 get_secret() ->
   {ok,Secret} = application:get_env(erlchat,secret),
